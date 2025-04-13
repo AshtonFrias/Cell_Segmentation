@@ -11,30 +11,33 @@ class SwinUNet(nn.Module):
         self.skip_type = skip_type
 
         # Swin Transformer Encoder (224x224 input)
+        # Pretained encoder from https://arxiv.org/abs/2103.14030
         config = SwinConfig.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
         config.image_size = 224
         self.encoder = SwinModel.from_pretrained("microsoft/swin-tiny-patch4-window7-224", config=config)
 
-        # Decoder (Upsampling to 224x224)
-        self.upconv4 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-        self.upconv3 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-        self.upconv2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
-        self.upconv1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+        # Decoder, Upsampling to 224x224 to match mask output
+        self.up_sample_conv4 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+        self.up_sample_conv3 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+        self.up_sample_conv2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+        self.up_sample_conv1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
         self.final_up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
 
         # Decoder Convolutional Blocks
-        self.dec4 = self.conv_block(768, 384)
-        self.dec3 = self.conv_block(384 + 768, 192)
-        self.dec2 = self.conv_block(192 + 384, 96)
-        self.dec1 = self.conv_block(96 + 192, 64)
+        self.decode4 = self.conv_block(768, 384)
+        self.decode3 = self.conv_block(384 + 768, 192)
+        self.decode2 = self.conv_block(192 + 384, 96)
+        self.decode1 = self.conv_block(96 + 192, 64)
 
         # Final Convolution (Output Mask)
         self.final = nn.Conv2d(64, n_classes, kernel_size=1)
 
+        # Convolutional Skip Connection layer
         self.skip_conv3 = nn.Conv2d(768, 768, kernel_size=1, device=self.device)
         self.skip_conv2 = nn.Conv2d(384, 384, kernel_size=1, device=self.device)
         self.skip_conv1 = nn.Conv2d(192, 192, kernel_size=1, device=self.device)
 
+    # Convolutional Similar to UNets
     def conv_block(self, in_channels, out_channels):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, device=self.device),
@@ -47,7 +50,7 @@ class SwinUNet(nn.Module):
         outputs = self.encoder(x, output_hidden_states=True)
         hidden_states = outputs.hidden_states
 
-        # Extract Encoder Feature Maps
+        # Extract Encoder Feature Maps from Swin Encoder
         enc1 = hidden_states[1]
         enc2 = hidden_states[2]
         enc3 = hidden_states[3]
@@ -60,7 +63,7 @@ class SwinUNet(nn.Module):
         h3 = h2 // 2
         h4 = h3 
 
-        # Reshape Encoder Feature Maps
+        # Reshape Feature Maps
         enc1 = enc1.transpose(1, 2).view(batch_size, 192, h1, h1)
         enc2 = enc2.transpose(1, 2).view(batch_size, 384, h2, h2)
         enc3 = enc3.transpose(1, 2).view(batch_size, 768, h3, h3)
@@ -69,10 +72,11 @@ class SwinUNet(nn.Module):
         feature_maps = [enc1, enc2, enc3, enc4]
 
         # Decoder Path with Skip Connections
-        up4 = self.upconv4(enc4)
-        up4 = self.dec4(up4)
+        up4 = self.up_sample_conv4(enc4)
+        up4 = self.decode4(up4)
         enc3_up = F.interpolate(enc3, size=up4.shape[2:], mode='bilinear', align_corners=False)
 
+        ''' Skip conneciton layer Modifications '''
         if self.skip_type == "convolutional":
             enc3_conv = self.skip_conv3(enc3_up)
             up3 = torch.cat([up4, enc3_conv], dim=1)
@@ -90,10 +94,12 @@ class SwinUNet(nn.Module):
         else:
             up3 = torch.cat([up4, enc3_up], dim=1)
 
-        up3 = self.dec3(up3)
-        up3 = self.upconv3(up3)
+        # Standard upconvolution
+        up3 = self.decode3(up3)
+        up3 = self.up_sample_conv3(up3)
         enc2_up = F.interpolate(enc2, size=up3.shape[2:], mode='bilinear', align_corners=False)
 
+        ''' Skip conneciton layer Modifications '''
         if self.skip_type == "convolutional":
             enc2_conv = self.skip_conv2(enc2_up)
             up2 = torch.cat([up3, enc2_conv], dim=1)
@@ -110,10 +116,12 @@ class SwinUNet(nn.Module):
         else:
             up2 = torch.cat([up3, enc2_up], dim=1)
 
-        up2 = self.dec2(up2)
-        up2 = self.upconv2(up2)
+        # Standard upconvolution
+        up2 = self.decode2(up2)
+        up2 = self.up_sample_conv2(up2)
         enc1_up = F.interpolate(enc1, size=up2.shape[2:], mode='bilinear', align_corners=False)
 
+        ''' Skip conneciton layer Modifications '''
         if self.skip_type == "convolutional":
             enc1_conv = self.skip_conv1(enc1_up)
             up1 = torch.cat([up2, enc1_conv], dim=1)
@@ -130,8 +138,9 @@ class SwinUNet(nn.Module):
         else:
             up1 = torch.cat([up2, enc1_up], dim=1)
 
-        up1 = self.dec1(up1)
-        up1 = self.upconv1(up1)
+        # Standard upconvolution
+        up1 = self.decode1(up1)
+        up1 = self.up_sample_conv1(up1)
 
         up1 = self.final_up(up1) 
         output = self.final(up1)

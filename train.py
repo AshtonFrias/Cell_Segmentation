@@ -20,6 +20,7 @@ from models.SwinUnet import SwinUNet
 
 class Train_Models:
     def __init__(self, name, model, batch, epoch, optimizer, criterion1, criterion2=None, iou_function=None, pixel_accuracy_function=None, device="cpu"):
+        # Initialize training loop along with the model
         self.name = name
         self.model = model
         self.batch = batch
@@ -36,8 +37,10 @@ class Train_Models:
             self.device = torch.device("cpu")
 
     def train(self, train_loader, val_loader):
+        # Standard training loop
         self.model = self.model.to(self.device)
     
+        # Store Losss and model performance metrics
         train_losses = []
         val_losses = []
         iou_scores_list = []
@@ -46,15 +49,17 @@ class Train_Models:
         for epoch in range(self.epoch):
             self.model.train()
             total_loss = 0
-    
+
             progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{self.epoch}", leave=False)
             for images, masks in progress_bar:
                 images = images.to(self.device)
                 masks = masks.to(self.device)
     
+                # Model Prediction
                 outputs = self.model(images)
+
+                # Loss Funcitons
                 loss1 = self.criterion1(outputs, masks)
-    
                 if self.criterion2 is not None:
                     loss2 = self.criterion2(outputs, masks)
                     loss = loss1 + loss2
@@ -69,9 +74,11 @@ class Train_Models:
     
                 progress_bar.set_postfix(loss=loss.item())
     
+            # Calculate training loss
             avg_train_loss = total_loss / len(train_loader)
             train_losses.append(avg_train_loss)
     
+            # Validation
             self.model.eval()
             val_loss = 0
             iou_scores = []
@@ -82,17 +89,21 @@ class Train_Models:
                     images = images.to(self.device)
                     masks = masks.to(self.device)
     
+                    # Model Predicition
                     outputs = self.model(images)
+
+                    # Loss Funcitons
                     loss1 = self.criterion1(outputs, masks)
-    
                     if self.criterion2 is not None:
                         loss2 = self.criterion2(outputs, masks)
                         loss = loss1 + loss2
                     else:
                         loss = loss1
     
+                    # Validation loss
                     val_loss += loss.item()
     
+                    # Model Performance
                     if self.iou_function:
                         iou = self.iou_function(outputs, masks)
                         iou_scores.append(iou)
@@ -100,16 +111,20 @@ class Train_Models:
                         pixel_accuracy = self.pixel_accuracy_function(outputs, masks)
                         pixel_accuracies.append(pixel_accuracy)
     
+            # Calculate average loss, iou and acc
             avg_val_loss = val_loss / len(val_loader)
             avg_iou = sum(iou_scores) / len(iou_scores) if iou_scores else 0
             avg_pixel_accuracy = sum(pixel_accuracies) / len(pixel_accuracies) if pixel_accuracies else 0
     
+            # Store the average
             val_losses.append(avg_val_loss)
             iou_scores_list.append(avg_iou)
             pixel_accuracies_list.append(avg_pixel_accuracy)
     
+            # Print results
             print(f"Epoch {epoch + 1}/{self.epoch}, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, IoU: {avg_iou:.4f}, Pixel Accuracy: {avg_pixel_accuracy:.4f}")
     
+        # Save model weights
         print("Training complete!")
         torch.save(self.model.state_dict(), f"{self.name}.pth")
         print("Model saved.")

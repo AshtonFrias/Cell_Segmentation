@@ -49,9 +49,6 @@ class UpSample(nn.Module):
         #a = nn.Parameter(torch.tensor(0.5))
         x1 = self.up(x1)
 
-        max_height = max(feature_maps.size(2) for feature_maps in feature_maps)
-        max_width = max(feature_maps.size(3) for feature_maps in feature_maps)
-
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
         x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2])
@@ -72,7 +69,7 @@ class UpSample(nn.Module):
 
                 fused_feature_maps = fused_feature_maps + feature_maps_resized
 
-                #Messed around with adding alpha but the results did not increase performance'''
+                #Messed around with adding alpha but the results did not increase performance
                 #fused_feature_maps = fused_feature_maps + (1 - a) * feature_maps_resized 
 
             x = torch.cat([x2, fused_feature_maps], dim=1) 
@@ -97,7 +94,11 @@ class OutputConvolution(nn.Module):
 class UNet(nn.Module):
     def __init__(self, num_channels, num_classes, skip_type="default"):
         super().__init__()
+
+        # Skip connection type 
         self.skip_type = skip_type
+
+        # Init for model
         self.inc = DoubleConvolutionBlock(num_channels, 64)
         self.down1 = DownSample(64, 128)
         self.down2 = DownSample(128, 256)
@@ -112,6 +113,8 @@ class UNet(nn.Module):
         self.outc = OutputConvolution(64, num_classes)
 
     def forward(self, x):
+        # Forward funciton for model prediction
+
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)

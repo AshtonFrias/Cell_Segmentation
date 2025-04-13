@@ -7,11 +7,13 @@ class Metrics:
     def m_f1(pred_mask, mask, smooth=1e-10, num_classes=3):
         # Mean F1 score for multiple classes and returns
         with torch.no_grad():
+            # Convert the prediction so it can be compared to gt
             pred_mask = F.softmax(pred_mask, dim=1)
             pred_mask = torch.argmax(pred_mask, dim=1).contiguous().view(-1)
             mask = mask.contiguous().view(-1)
 
             f1_per_class = []
+            # Get the average f1 score for each class
             for clas in range(num_classes):
                 true_class = pred_mask == clas
                 true_label = mask == clas
@@ -19,13 +21,15 @@ class Metrics:
                 if true_label.long().sum().item() == 0:
                     f1_per_class.append(np.nan)
                 else:
-                    intersect = (true_class & true_label).sum().item()
+                    # https://en.wikipedia.org/wiki/F-score
+                    intersect = (true_class & true_label).sum().item()         
                     precision = intersect / (true_class.sum().item() + smooth)
                     recall = intersect / (true_label.sum().item() + smooth)
 
                     f1 = (2 * precision * recall) / (precision + recall + smooth)
                     f1_per_class.append(f1)
 
+            # Return the F1 score
             return np.nanmean(f1_per_class)
 
     @staticmethod
@@ -56,6 +60,7 @@ class Metrics:
         fp = (pred_mask * (1 - mask)).sum().item()  # False positives
         fn = ((1 - pred_mask) * mask).sum().item()  # False negatives
 
+        # https://en.wikipedia.org/wiki/F-score
         precision = tp / (tp + fp + smooth)
         recall = tp / (tp + fn + smooth)
         f1 = 2 * (precision * recall) / (precision + recall + smooth)

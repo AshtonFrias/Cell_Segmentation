@@ -28,26 +28,33 @@ class MoNuSegDataset(Dataset):
         return len(self.image_files)
 
     def __getitem__(self, index):
+        # Check if index is out of range
         if index >= len(self.image_files):
             raise IndexError(f"Index {index} out of range. Dataset has {len(self.image_files)} items.")
 
+        # Get image path
         image_path = os.path.join(self.image_folder, self.image_files[index])
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)
         if image is None:
             raise ValueError(f"Failed to load image: {image_path}")
 
+        # Normalize image
         image = np.float32(image) / 255.0
         
+        # Get mask path
         mask_path = os.path.join(self.mask_folder, self.mask_files[index])
         mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         if mask is None:
             raise ValueError(f"Failed to load mask: {mask_path}")
 
+        # Convert mask to grey scals
         mask = np.where(mask > 0, 1.0, 0.0).astype(np.float32)
 
+        # Augment image
         if self.augment:
             image, mask = self.augmentor(image, mask)
 
+        # Convert to tensor
         image = torch.from_numpy(image).permute(2, 0, 1).to(self.device)
         mask = torch.from_numpy(mask).to(self.device).unsqueeze(0)
 
@@ -65,22 +72,29 @@ class BCSSDataset(Dataset):
         self.augmentor = DataAugmentation() if augment else None
 
     def __getitem__(self, idx):
+
+        #Get image and mask path
         image_path = os.path.join(self.image_dir, self.image_filenames[idx])
         mask_path = os.path.join(self.mask_dir, self.mask_filenames[idx])
 
+        # Get image
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)
         if image is None:
             raise ValueError(f"Failed to load image: {image_path}")
 
+        # Normalize
         image = np.float32(image) / 255.0
 
+        # Get mask
         mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         if mask is None:
             raise ValueError(f"Failed to load mask: {mask_path}")
 
+        # Augment
         if self.augment:
             image, mask = self.augmentor(image, mask)
 
+        # Convert to tensor
         image = torch.from_numpy(image).permute(2, 0, 1).to(self.device)
         mask = torch.from_numpy(mask).long().to(self.device)
 

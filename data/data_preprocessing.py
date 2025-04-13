@@ -8,6 +8,10 @@ from PIL import Image
 import shutil
 import random
 
+'''
+This file is responsible for preprocessing MoNuSeg and BCSS512 datasets
+'''
+
 def save_mask_to_txt(mask, txt_path):
     """Saves a grayscale mask to a text file."""
     np.savetxt(txt_path, mask, fmt='%d')

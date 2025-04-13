@@ -20,14 +20,27 @@ from torch.utils.data import Dataset, DataLoader, Subset, random_split
 
 
 def train_model(model_type = "Unet_MoNuSeg"):
+    '''
+    This fucntion is responsible for configuring all of the models,
+    and passing them into the training funciton. 
+    '''
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+    # Choose which model is going to be trained
     if model_type == "Unet_MoNuSeg":
+        # The rest of the If statements are exaclty like this one, but use different
+        # dataloaders, and loss functions 
         print("Unet_MoNuSeg_Fusion")
         train_ratio = 0.8
         val_ratio = 1 - train_ratio
 
-        train_dataset = MoNuSegDataset(image_folder="./datasets/MoNuSeg/train/processed_images", mask_folder="./datasets/MoNuSeg/train/processed_masks", augment=True, device=device)
+        # Data loader
+        train_dataset = MoNuSegDataset(image_folder="./datasets/MoNuSeg/train/processed_images",
+                                       mask_folder="./datasets/MoNuSeg/train/processed_masks",
+                                       augment=True, device=device)
+        
+        # Split up training dataset for train and validation
         total_size = len(train_dataset)
         train_size = int(train_ratio * total_size)
         val_size = total_size - train_size
@@ -37,18 +50,22 @@ def train_model(model_type = "Unet_MoNuSeg"):
         train_loader = DataLoader(train_subset, batch_size=batch, shuffle=True)
         val_loader = DataLoader(val_subset, batch_size=batch, shuffle=False)
 
+        # Initialize Model
         n_classes = 1
         n_channels = 3
         model = UNet(n_channels, n_classes, skip_type="convolutional").to(device)
 
+        # Optimizer and Loss Function
         optimizer = Adam(model.parameters(), lr=1e-3)
         criterion1 = nn.BCEWithLogitsLoss()
         criterion2 = None
 
+        # This will be the name for the save weights
         name = "unet_monu_conv"
         batch = 8
         epoch = 50
 
+        # Metrics to measure the performance of the model during training
         iou_function=Metrics.calculate_iou
         pixel_accuracy_function=Metrics.acc
 
@@ -57,7 +74,9 @@ def train_model(model_type = "Unet_MoNuSeg"):
         train_ratio = 0.8
         val_ratio = 1 - train_ratio
 
-        train_dataset = MoNuSegDataset(image_folder="./datasets/MoNuSeg/train/processed_images", mask_folder="./datasets/MoNuSeg/train/processed_masks", augment=True, device=device)
+        train_dataset = MoNuSegDataset(image_folder="./datasets/MoNuSeg/train/processed_images", 
+                                       mask_folder="./datasets/MoNuSeg/train/processed_masks",
+                                       augment=True, device=device)
         total_size = len(train_dataset)
         train_size = int(train_ratio * total_size)
         val_size = total_size - train_size
@@ -81,8 +100,13 @@ def train_model(model_type = "Unet_MoNuSeg"):
 
     elif model_type == "Swinn_BCSS":
         print("Swinn_BCSS_Conv")
-        train_dataset = BCSSDataset(image_dir="./datasets/BCSS/train", mask_dir="./datasets/BCSS/train_mask", augment=True, device=device)
-        val_dataset = BCSSDataset(image_dir="./datasets/BCSS/val", mask_dir="./datasets/BCSS/val_mask", augment=True, device=device)
+        train_dataset = BCSSDataset(image_dir="./datasets/BCSS/train",
+                                    mask_dir="./datasets/BCSS/train_mask",
+                                    augment=True, device=device)
+        
+        val_dataset = BCSSDataset(image_dir="./datasets/BCSS/val",
+                                  mask_dir="./datasets/BCSS/val_mask",
+                                  augment=True, device=device)
 
         batch = 50
         train_loader = DataLoader(dataset=train_dataset, batch_size=batch, shuffle=True)
@@ -103,8 +127,13 @@ def train_model(model_type = "Unet_MoNuSeg"):
 
     elif model_type == "Unet_BCSS":
         print("Unet_BCSS_convolutional!")
-        train_dataset = BCSSDataset(image_dir="./datasets/BCSS/train", mask_dir="./datasets/BCSS/train_mask", augment=True, device=device)
-        val_dataset = BCSSDataset(image_dir="./datasets/BCSS/val", mask_dir="./datasets/BCSS/val_mask", augment=True, device=device)
+        train_dataset = BCSSDataset(image_dir="./datasets/BCSS/train", 
+                                    mask_dir="./datasets/BCSS/train_mask", 
+                                    augment=True, device=device)
+        
+        val_dataset = BCSSDataset(image_dir="./datasets/BCSS/val", 
+                                  mask_dir="./datasets/BCSS/val_mask", 
+                                  augment=True, device=device)
 
         batch = 50
         train_loader = DataLoader(dataset=train_dataset, batch_size=batch, shuffle=True)
@@ -124,8 +153,13 @@ def train_model(model_type = "Unet_MoNuSeg"):
 
     elif model_type == "Unet_BCSS_512":
         print("Unet_BCSS_512_fusion")
-        train_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/train_images", mask_dir="./datasets/BCSS_512/train_masks", augment=True, device=device)
-        val_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/val_images", mask_dir="./datasets/BCSS_512/val_masks", augment=True, device=device)
+        train_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/train_images", 
+                                    mask_dir="./datasets/BCSS_512/train_masks", 
+                                    augment=True, device=device)
+        
+        val_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/val_images", 
+                                  mask_dir="./datasets/BCSS_512/val_masks", 
+                                  augment=True, device=device)
 
         batch = 50
         train_loader = DataLoader(dataset=train_dataset, batch_size=batch, shuffle=True)
@@ -144,8 +178,13 @@ def train_model(model_type = "Unet_MoNuSeg"):
         pixel_accuracy_function=Metrics.pixel_accuracy
     else:
         print("Swinn_BCSS_512_Fusion")
-        train_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/train_images", mask_dir="./datasets/BCSS_512/train_masks", augment=True, device=device)
-        val_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/val_images", mask_dir="./datasets/BCSS_512/val_masks", augment=True, device=device)
+        train_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/train_images", 
+                                    mask_dir="./datasets/BCSS_512/train_masks", 
+                                    augment=True, device=device)
+        
+        val_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/val_images", 
+                                  mask_dir="./datasets/BCSS_512/val_masks", 
+                                  augment=True, device=device)
 
         batch = 25
         train_loader = DataLoader(dataset=train_dataset, batch_size=batch, shuffle=True)
@@ -165,6 +204,8 @@ def train_model(model_type = "Unet_MoNuSeg"):
         iou_function=Metrics.m_iou
         pixel_accuracy_function=Metrics.pixel_accuracy
 
+    # Send all of this configure variables to training function,
+    # this will return the model weight and traning/validation stats
     trainer = Train_Models(
         name=name,
         model=model,
@@ -182,8 +223,10 @@ def train_model(model_type = "Unet_MoNuSeg"):
 
 def main():
     # Train these three models
-    #train_model(model_type = "Unet_MoNuSeg")
     train_model(model_type = "Swinn_BCSS")
+
+    # Examples of other training calls
+    #train_model(model_type = "Unet_MoNuSeg")
     #train_model(model_type = "Swinn_MoNuSeg")
 
 if __name__ == "__main__":

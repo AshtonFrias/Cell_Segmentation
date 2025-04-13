@@ -18,6 +18,7 @@ def test(model_cat = 0, dataset = 0, vis = False):
     f1_scores = []
     n_channels = 3
     
+    # Get model path and initalized models
     if model_cat == 0:
         print("UNet MoNuSeg")
         # ./model_weights/unet_augment/monu/unet_monu_conv.pth
@@ -112,11 +113,15 @@ def test(model_cat = 0, dataset = 0, vis = False):
         else:
             test_dataset = BCSSDataset(image_dir="./datasets/BCSS_512/test_vis_image", 
                                        mask_dir="./datasets/BCSS_512/test_vis_mask", device=device)
-                        
+
+    # Load model weights            
     model.load_state_dict(torch.load(model_path, map_location=device))
     model.to(device)
+
+    # Data loader
     test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
     
+    # The following are labels and the colors that will represent them in the visualization
     class_labels = [
     'outside_roi', 'tumor', 'stroma', 'lymphocytic_infiltrate', 'necrosis_or_debris',
     'glandular_secretions', 'blood', 'exclude', 'metaplasia_NOS', 'fat',
@@ -124,8 +129,6 @@ def test(model_cat = 0, dataset = 0, vis = False):
     'lymphatics', 'undetermined', 'nerve', 'skin_adnexa', 'blood_vessel',
     'angioinvasion', 'dcis', 'other'
     ]
-
-    # 22 visually distinct colors (feel free to change)
     class_colors = [
         '#000000', '#e6194b', '#3cb44b', '#ffe119', '#4363d8',
         '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c',
@@ -146,7 +149,6 @@ def test(model_cat = 0, dataset = 0, vis = False):
 
             if model_cat in [0, 1]:
                 iou_score = Metrics.calculate_iou(output, mask)
-                acc = Metrics.acc(output, mask)
                 f1 = Metrics.f1_score(output, mask)
     
             else:
@@ -157,34 +159,40 @@ def test(model_cat = 0, dataset = 0, vis = False):
             f1_scores.append(f1)
 
             if vis:
-                img_np = image.squeeze().cpu().permute(1, 2, 0).numpy()
-                mask_np = mask.squeeze().cpu().numpy()
+                # Visualization
+
+                # Convert image and mask to numpy
+                image = image.squeeze().cpu().permute(1, 2, 0).numpy()
+                mask = mask.squeeze().cpu().numpy()
 
                 if n_classes == 1:
-                    pred_np = output_binary.squeeze().cpu().numpy()
+                    pred = output_binary.squeeze().cpu().numpy()
                 else:
-                    pred_np = torch.argmax(output, dim=1).squeeze().cpu().numpy().astype(np.uint8)
+                    pred = torch.argmax(output, dim=1).squeeze().cpu().numpy().astype(np.uint8)
 
+                # Overlay prediction over original image
                 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-                im_pred = axes[0].imshow(img_np)
-                im_pred_mask = axes[0].imshow(pred_np, cmap='gray' if n_classes == 1 else cmap, alpha=0.5)
+                plot_pred = axes[0].imshow(image)
+                plot_pred_mask = axes[0].imshow(pred, cmap='gray' if n_classes == 1 else cmap, alpha=0.5)
                 axes[0].set_title('Swin-UNet Prediction')
                 axes[0].axis('off')
-                # Ground Truth overlay
-                im_gt = axes[1].imshow(img_np)
-                im_gt_mask = axes[1].imshow(mask_np, cmap='jet' if n_classes == 1 else cmap, alpha=0.5)
+
+                # Overlay ground truth over original image
+                image_ground_truth = axes[1].imshow(image)
+                image_ground_truth_mask = axes[1].imshow(mask, cmap='jet' if n_classes == 1 else cmap, alpha=0.5)
                 axes[1].set_title('Ground Truth Mask')
                 axes[1].axis('off')
-                # Create a legend using patches
+
                 if n_classes > 1:
                     legend_patches = [
                         mpatches.Patch(color=class_colors[i], label=f"{i}: {class_labels[i]}")
                         for i in range(n_classes)
                     ]
-                    # Add the legend to the right of the plots
-                    plt.subplots_adjust(right=0.8)  # Adjust right margin to make space for the legend
+                    plt.subplots_adjust(right=0.8)
                     fig.legend(handles=legend_patches, loc='center right', fontsize=8, title="Classes")
-                plt.tight_layout(rect=[0, 0, 0.8, 1]) # Adjust tight layout to fit the legend.
+                
+                # Plot
+                plt.tight_layout(rect=[0, 0, 0.8, 1])
                 plt.show()
 
     # Compute final average scores
