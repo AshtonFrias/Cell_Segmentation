@@ -56,3 +56,7 @@ train.py
 
 train_models.py
     - Testing loop for all the model combintations
+
+
+Model Weights can be downloaded here:
+	https://drive.google.com/file/d/1G6EfRvHH1N67LZ8orzIAulCgaOLrckvt/view?usp=sharing
