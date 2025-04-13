@@ -1,0 +1,12 @@
+torch
+torchvision
+torchaudio
+numpy
+matplotlib
+opencv-python
+scikit-learn
+tqdm
+pillow
+timm
+albumentations
+swin-transformer-pytorch

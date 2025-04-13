@@ -1,0 +1,9 @@
+Conda env
+conda create --name seg-final python=3.9
+conda activate seg-final
+
+Install these libraries
+I have cuda 12.6
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+
+pip install -r requirements.txt
