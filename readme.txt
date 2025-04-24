@@ -39,10 +39,12 @@ Metrics
 Models
     - SwinUnet.py:
     This script has the code for the SwinUnet model, since I did not want to train the model from scratch I used a 
-    pretrain swin encoder. Here is the paper I based my architecture off of, it doesnt not match perfectly because of the
-    pretrained encoder.
+    pretrain swin encoder. Here is the paper I based my architecture off of, it doesn't not match perfectly because of the
+    pretrained encoder. Again the main contribution to this project is modifying the skip connection layers.
         https://arxiv.org/pdf/2105.05537
-
+	https://medium.com/@ashishbisht0307/swin-transformer-based-unet-architecture-for-semantic-segmentation-with-pytorch-code-91e779334e8e
+	https://huggingface.co/docs/transformers/model_doc/swin
+	
     - Unet.py:
     This code as the standard pytorch implementation for UNet architecture. Again, I used code from this souce, 
     only thing I modified in this code was the skip connection layers which my paper is about. 
